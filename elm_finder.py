@@ -152,7 +152,9 @@ def plot_elms(elm_file: str,
               end_time: float,
               quantile: float = 0.95,
               bes_thresh: float = 1.0,
-              plot_masks: bool = False) -> None:
+              plot_masks: bool = False,
+              save_fig: bool = False,
+              save_name: str = 'save_fig.png') -> None:
     if plot_masks:
         rows = 4
     else:
@@ -203,7 +205,11 @@ def plot_elms(elm_file: str,
 
     axs[-1].set_xlabel('time (ms)')
 
-    plt.show()
+    if save_fig:
+        fig.savefig(fname=save_name, dpi=300)
+    else:
+        fig.show()
+    plt.close(fig=fig)
 
 
 if __name__ == "__main__":
