@@ -12,9 +12,10 @@ def diff_signal(arr: np.array) -> np.array:
 
 def diff_fil(arr: np.array) -> np.array:
     """ ms-scale smoothing before diff """
-    scale = 1
-    y = np.convolve(arr, np.ones(scale) / scale, mode='same')
-    return diff_signal(y)
+    # scale = 1
+    # y = np.convolve(arr, np.ones(scale) / scale, mode='same')
+    # return diff_signal(y)
+    return arr[:-1]
 
 
 def nothing(arr: np.array) -> np.array:
