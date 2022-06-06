@@ -51,8 +51,9 @@ def add_labeled_periods(ax: plt.axis, times: np.array, labels: np.array):
     edges = _get_edges(labels)
     span_time = times[edges]
     for idx in range(0, span_time.shape[0], 2):
+        label = 'labels' if idx == 0 else None
         ax.axvspan(span_time[idx], span_time[idx + 1], color='g', alpha=0.5,
-                   linestyle=None, label='labels')
+                   linestyle=None, label=label)
 
 
 def plot_bad_example(elm_file: h5py.Group,
