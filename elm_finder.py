@@ -72,15 +72,15 @@ def label_elms(df: pd.DataFrame) -> pd.DataFrame:
                      (np.convolve(df['denv3f'],
                                   np.ones(2 * n + 1),
                                   mode='same') > 0).astype(int)
-    df['fil_elms'] = (np.convolve(df['FS02'],
-                                  np.ones(2 * n + 1),
-                                  mode='same') > 0).astype(int) & \
-                     (np.convolve(df['FS03'],
-                                  np.ones(2 * n + 1),
-                                  mode='same') > 0).astype(int) & \
-                     (np.convolve(df['FS04'],
-                                  np.ones(2 * n + 1),
-                                  mode='same') > 0).astype(int)
+    # two of of three
+    fs02 = (np.convolve(df['FS02'], np.ones(2 * n + 1),
+                        mode='same') > 0).astype(int)
+    fs03 = (np.convolve(df['FS03'], np.ones(2 * n + 1),
+                        mode='same') > 0).astype(int)
+    fs04 = (np.convolve(df['FS04'], np.ones(2 * n + 1),
+                        mode='same') > 0).astype(int)
+    df['fil_elms'] =  ((fs02 + fs03 + fs04) > 1)
+
 
     df['elms'] = df['int_elms'] & df['fil_elms'] & df['bes']
     return df
