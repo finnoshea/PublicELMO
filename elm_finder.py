@@ -38,7 +38,7 @@ def get_data(elm_file: Union[str, h5py.Group],
              start_time: float, end_time: float) -> dict:
     if isinstance(elm_file, str):
         out = load_bes_data(elm_file, start_time, end_time)
-    else:
+    else:  # for SMITHSHOTS
         out = {k: v[()] for k, v in elm_file.items()}
     return out
 

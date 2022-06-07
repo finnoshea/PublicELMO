@@ -64,7 +64,7 @@ def _harvest_bes_data(grp: h5py.Group,
         if 'BES' in key:
             value.read_direct(data[index, :], source_sel=mask, dest_sel=None)
             index += 1
-    data[32:, :] *= 2  # second have channels have less range
+    data[32:, :] *= 2  # second half channels have 50% less range
     return grp['times'][mask], data.mean(axis=0)
 
 
