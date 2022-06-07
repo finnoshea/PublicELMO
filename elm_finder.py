@@ -204,7 +204,7 @@ def plot_elms(elm_file: str,
         axs[3].set_ylabel('masks')
 
     axs[-1].set_xlabel('time (ms)')
-
+    print('save_fig: ', save_fig)
     if save_fig:
         fig.savefig(fname=save_name, dpi=300)
     else:
@@ -213,12 +213,12 @@ def plot_elms(elm_file: str,
 
 
 if __name__ == "__main__":
-    quantile = 0.96
-    # fn = 'elm_data_166576.h5'
-    # plot_elms(fn, 2400, 2600, quantile, 1.0, False)
+    quantile = 0.997
+    plot_elms('/sdf/group/ml/datasets/elm_data/elm_data_166576.h5',
+              2400, 2600, quantile, 1.0, False, save_fig=True)
     # plot_elms('/sdf/group/ml/datasets/elm_data/elm_data_179498.h5',
     #           5405, 5430, quantile, 1.0, False)
     # plot_elms('/sdf/group/ml/datasets/elm_data/elm_data_179492.h5',
     #           2180, 2205, quantile, 1.0, False)
-    plot_elms('/sdf/group/ml/datasets/elm_data/elm_data_179492.h5',
-              2180, 2205, quantile, 1.0, False)
+    # plot_elms('/sdf/group/ml/datasets/elm_data/elm_data_179492.h5',
+    #           2180, 2205, quantile, 1.0, False)
