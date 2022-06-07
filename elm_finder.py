@@ -65,7 +65,7 @@ def find_elms(data: dict,
 def label_elms(df: pd.DataFrame) -> pd.DataFrame:
     # df['int_elms'] = df['denv2f'] & df['denv3f']
     # df['fil_elms'] = df['FS02'] & df['FS03'] & df['FS04']
-    n = 500
+    n = 100
     df['int_elms'] = (np.convolve(df['denv2f'],
                                   np.ones(2 * n + 1),
                                   mode='same') > 0).astype(int) | \
