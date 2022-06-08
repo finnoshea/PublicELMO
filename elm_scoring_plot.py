@@ -109,9 +109,9 @@ def plot_bad_example(elm_file: h5py.Group,
 
     if save_fig:
         fig.savefig(fname=save_name, dpi=300)
+        plt.close(fig=fig)
     else:
         fig.show()
-    plt.close(fig=fig)
 
 
 def find_bad_examples(quantile: float = 0.95, bes_thresh: float = 1.0,
@@ -130,8 +130,6 @@ def find_bad_examples(quantile: float = 0.95, bes_thresh: float = 1.0,
                                      bes_thresh=bes_thresh,
                                      save_fig=True,
                                      save_name=save_name)
-
-
 
 
 with open('quantile_stats.json', 'r') as jf:

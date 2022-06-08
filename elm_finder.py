@@ -81,7 +81,6 @@ def label_elms(df: pd.DataFrame) -> pd.DataFrame:
                         mode='same') > 0).astype(int)
     df['fil_elms'] =  ((fs02 + fs03 + fs04) > 1)
 
-
     df['elms'] = df['int_elms'] & df['fil_elms'] & df['bes']
     return df
 
