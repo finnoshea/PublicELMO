@@ -62,6 +62,22 @@ def find_elms(data: dict,
     return masks, signals
 
 
+def _bridge_small_gaps(labels: np.array, n: int) -> np.array:
+    out = labels.copy()
+    diffs = np.diff(out.astype(int), prepend=[0])
+    # correct the edge case of ending in a window
+    if out[-1] == 1:
+        diffs[-1] = -1
+    # get the indexes for the leading edges of the labeled sections (+1)
+    starts = np.arange(diffs.shape[0])[diffs > 0]
+    # the the indexes for the trailing edges of the labeled sections (-1)
+    stops = np.arange(diffs.shape[0])[diffs < 0]
+    for sta, sto in zip(starts[1:], stops[:-1]):
+        if sta - sto <= n:
+            out[sto:sta] = True
+    return out
+
+
 def label_elms(df: pd.DataFrame) -> pd.DataFrame:
     # df['int_elms'] = df['denv2f'] & df['denv3f']
     # df['fil_elms'] = df['FS02'] & df['FS03'] & df['FS04']
@@ -79,9 +95,10 @@ def label_elms(df: pd.DataFrame) -> pd.DataFrame:
                         mode='same') > 0).astype(int)
     fs04 = (np.convolve(df['FS04'], np.ones(2 * n + 1),
                         mode='same') > 0).astype(int)
-    df['fil_elms'] =  ((fs02 + fs03 + fs04) > 1)
+    df['fil_elms'] = ((fs02 + fs03 + fs04) > 1)
 
-    df['elms'] = df['int_elms'] & df['fil_elms'] & df['bes']
+    elms = (df['int_elms'] & df['fil_elms'] & df['bes']).values
+    df['elms'] = _bridge_small_gaps(labels=elms, n=n)
     return df
 
 
