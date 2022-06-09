@@ -56,6 +56,25 @@ def add_labeled_periods(ax: plt.axis, times: np.array, labels: np.array):
 def blur_labels(arr: np.ndarray, n: int) -> np.ndarray:
     return (np.convolve(arr, np.ones(2 * n + 1), mode='same') > 0).astype(int)
 
+
+def mark_peaks(arr: np.array, labels: np.array) -> np.array:
+    out = np.zeros_like(arr, dtype=bool)
+    diffs = np.diff(labels.astype(int), prepend=[0])
+    # correct the edge case of ending in a window
+    if labels[-1] == 1:
+        diffs[-1] = -1
+    # get the indexes for the leading edges of the labeled sections (+1)
+    starts = np.arange(diffs.shape[0])[diffs > 0]
+    # the the indexes for the trailing edges of the labeled sections (-1)
+    stops = np.arange(diffs.shape[0])[diffs < 0]
+    # look for the peaks between each pair of leading and trailing edges
+    peaks = []
+    for sta, sto in zip(starts, stops):
+        peaks.append(sta + np.argmax(arr[sta:sto + 1]) + 1)
+    out[peaks] = True
+    return out
+
+
 ############################################
 # data loading
 ############################################
@@ -176,7 +195,7 @@ class Elmo:
         # either
         denv2f = blur_labels(self.candidate_masks['denv2f'], n)
         denv3f = blur_labels(self.candidate_masks['denv3f'], n)
-        self.candidate_masks['int_elms'] = denv2f | denv3f
+        self.candidate_masks['int_elms'] = (denv2f | denv3f).astype(bool)
         # two of of three
         fs02 = blur_labels(self.candidate_masks['fs02'], n)
         fs03 = blur_labels(self.candidate_masks['fs03'], n)
@@ -186,6 +205,10 @@ class Elmo:
         self.candidate_masks['elms'] = self.candidate_masks['int_elms'] & \
                                        self.candidate_masks['fil_elms'] & \
                                        self.candidate_masks['bes']
+
+        self.candidate_masks['peaks'] = mark_peaks(
+            self.candidate_signals['fs03'],
+            self.candidate_masks['elms'].values)
 
     def find_elms(self) -> pd.DataFrame:
         """
@@ -240,7 +263,7 @@ class Elmo:
         add_labeled_periods(axs[2], df['time'].values, df['bes'].values)
         axs[2].set_ylabel('BES')
         axs[2].legend(loc='upper right')
-        elm_times = df['time'][df['elms']]
+        elm_times = df['time'][df['peaks']]
         axs[2].plot(elm_times, np.zeros_like(elm_times), '*r')
 
         axs[-1].set_xlabel('time (ms)')
@@ -253,6 +276,6 @@ class Elmo:
 
 
 if __name__ == "__main__":
-    elmo = Elmo('elm_data_166576.h5', start_time=2400, end_time=2600,
+    elmo = Elmo('elm_data_166576.h5', start_time=5600, end_time=5800,
                 percentile=0.997)
     df = elmo.find_elms()
