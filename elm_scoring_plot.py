@@ -135,6 +135,7 @@ def find_bad_examples(quantile: float = 0.95, bes_thresh: float = 1.0,
 with open('quantile_stats.json', 'r') as jf:
     quants = json.load(jf)
 
+
 df = pd.DataFrame.from_dict(quants, orient='index')
 df['precision'] = df.apply(lambda row: row['tp'] / (row['tp'] + row['fp']),
                            axis=1)
@@ -146,11 +147,15 @@ fig, ax = plt.subplots(1, 1)
 
 for thresh in df['bes_thresh'].unique():
     mask = df['bes_thresh'] == thresh
-    plt.plot(df.loc[mask, 'recall'], df.loc[mask, 'precision'],
-             label='bes >= {:2.1f}'.format(thresh))
+    recall = np.hstack(([1.0], df.loc[mask, 'recall'], [0.0]))
+    precision = np.hstack(([0.0], df.loc[mask, 'precision'], [1.0]))
+    # plt.plot(df.loc[mask, 'recall'], df.loc[mask, 'precision'],
+    #          label='bes >= {:2.1f}'.format(thresh))
+    plt.plot(recall, precision)
+
 ax.set_xlabel('recall')
 ax.set_ylabel('precision')
-ax.set_xlim([0, 1])
-ax.set_ylim([0, 1])
-ax.legend(loc='lower left')
+ax.set_xlim([0, 1.2])
+ax.set_ylim([0, 1.2])
+# ax.legend(loc='lower left')
 plt.show()

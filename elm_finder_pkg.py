@@ -242,44 +242,48 @@ class Elmo:
 
     def plot_data(self,
                   save_fig: bool = False,
+                  show_more: bool = True,
                   save_name: str = 'elm_data.png'):
         fa = 'You must run find_elms before there is anything to plot.'
         assert 'elms' in self.candidate_masks, fa
         out = self.data
         df = self.candidate_masks
         signals = self.candidate_signals
-        fig, axs = plt.subplots(3, 1, sharex='col')
+        fig, axs = plt.subplots(3, 1, sharex='col', figsize=(6, 8))
         title = self.params['filename']
         # interferometer data
-        axs[0].set_title(title)
         axs[0].plot(out['time'], out['denv2f'], 'b', label='denv2f')
         axs[0].plot(out['time'], out['denv3f'], 'r', label='denv3f')
         add_labeled_periods(axs[0], df['time'].values, df['int_elms'].values)
-        axs[0].set_ylabel('Line Avg Dens (AU)')
-        axs[0].legend(loc='upper right')
-        axt0 = axs[0].twinx()
-        axt0.plot(out['time'][:-1], signals['denv2f'], 'b', alpha=0.3)
-        axt0.plot(out['time'][:-1], signals['denv3f'], 'r', alpha=0.3)
-        axt0.set_ylabel('time derivative')
-        axt0.set_yscale('log')
+        axs[0].set_ylabel('interferometer (arb.)')
+        if show_more:
+            axs[0].set_title(title)
+            axs[0].legend(loc='upper right')
+            axt0 = axs[0].twinx()
+            axt0.plot(out['time'][:-1], signals['denv2f'], 'b', alpha=0.3)
+            axt0.plot(out['time'][:-1], signals['denv3f'], 'r', alpha=0.3)
+            axt0.set_ylabel('time derivative')
+            axt0.set_yscale('log')
         # filterscope data
         axs[1].plot(out['time'], out['fs02'], 'b', label='FS02')
         axs[1].plot(out['time'], out['fs03'], 'r', label='FS03')
         axs[1].plot(out['time'], out['fs04'], 'm', label='FS04')
         add_labeled_periods(axs[1], df['time'].values, df['fil_elms'].values)
-        axs[1].set_ylabel('D alpha')
-        axs[1].legend(loc='upper right')
-        axt1 = axs[1].twinx()
-        axt1.plot(out['time'][:-1], signals['fs02'], 'b', alpha=0.3)
-        axt1.plot(out['time'][:-1], signals['fs03'], 'r', alpha=0.3)
-        axt1.plot(out['time'][:-1], signals['fs04'], 'm', alpha=0.3)
-        axt1.set_ylabel('time derivative')
-        axt1.set_yscale('log')
+        axs[1].set_ylabel('filterscope (arb.)')
+        if show_more:
+            axs[1].legend(loc='upper right')
+            axt1 = axs[1].twinx()
+            axt1.plot(out['time'][:-1], signals['fs02'], 'b', alpha=0.3)
+            axt1.plot(out['time'][:-1], signals['fs03'], 'r', alpha=0.3)
+            axt1.plot(out['time'][:-1], signals['fs04'], 'm', alpha=0.3)
+            axt1.set_ylabel('time derivative')
+            axt1.set_yscale('log')
         # BES data
         axs[2].plot(out['time'], out['bes'], label='Avg BES')
         add_labeled_periods(axs[2], df['time'].values, df['elms'].values)
-        axs[2].set_ylabel('BES')
-        axs[2].legend(loc='upper right')
+        axs[2].set_ylabel('BES (V)')
+        if show_more:
+            axs[2].legend(loc='upper right')
         elm_times = df['time'][df['peaks']]
         axs[2].plot(elm_times, np.zeros_like(elm_times), '*r')
 
@@ -293,7 +297,11 @@ class Elmo:
 
 
 if __name__ == "__main__":
-    elmo = Elmo('elm_data_166576.h5', start_time=5600, end_time=5800,
+    # elmo = Elmo('elm_data_166576.h5', start_time=5600, end_time=5800,
+    #             percentile=0.997)
+    # elmo = Elmo('elm_data_166576.h5', start_time=2450, end_time=2550,
+    #             percentile=0.997)
+    elmo = Elmo('elm_data_166576.h5', start_time=2460, end_time=2485,
                 percentile=0.997)
     # elmo = Elmo('/usr/src/app/elm_data/elm_data_184452.h5',
     #             start_time=4000, end_time=4200, percentile=0.997)
