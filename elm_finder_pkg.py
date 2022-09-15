@@ -124,6 +124,23 @@ def lengthen_data(arr: np.array, new_length: int) -> np.array:
     return idct(final_arr, norm='ortho') * np.sqrt(new_length / old_length)
 
 
+def _count_chunks(L: int, max_chunk_length: int) -> (int, int):
+    n = L // max_chunk_length + int(bool(L % max_chunk_length))
+    m = L // n
+    return n, m
+
+
+def chunked_lengthen(arr: np.ndarray, new_length: int) -> np.array:
+    """ do the lengthening in chunks """
+    max_chunk_length = 1000 * 200  # 200 ms long
+    n, m = _count_chunks(new_length, max_chunk_length)
+    p = arr.shape[0] // n
+    output = np.zeros(n * m)
+    for i in range(n):
+        output[i * m:(i + 1) * m] = lengthen_data(arr[i * p:(i + 1) * p], m)
+    return output
+
+
 def extract_data(hdffile: str,
                  start_time: float,
                  end_time: float
@@ -139,14 +156,21 @@ def extract_data(hdffile: str,
                                  start_time, end_time)
         for name in ['denv2f', 'denv3f']:
             key = 'interferometer/' + name
-            data[name.lower()] = lengthen_data(hdfgrp[key][int_mask],
-                                               new_length=bes_times.shape[0])
+            data[name.lower()] = chunked_lengthen(
+                hdfgrp[key][int_mask], new_length=bes_times.shape[0])
         fil_mask = _mask_by_time(hdfgrp['filterscope/times'][()],
                                  start_time, end_time)
         for name in ['FS02', 'FS03', 'FS04']:
             key = 'filterscope/' + name
-            data[name.lower()] = lengthen_data(hdfgrp[key][fil_mask],
-                                               new_length=bes_times.shape[0])
+            data[name.lower()] = chunked_lengthen(
+                hdfgrp[key][fil_mask], new_length=bes_times.shape[0])
+
+    # account for the chunking making some of the oversampled "data"
+    # shorter, only trims off a point or two
+    max_length = min(data['denv2f'].shape[0], data['fs02'].shape[0])
+    for key, value in data.items():
+        data[key] = value[:max_length]
+
     return data
 
 
@@ -295,13 +319,25 @@ class Elmo:
         else:
             fig.show()
 
+    def plot_bes_at_elm(self, peak_time_index: int):
+        fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+        dt = 1000  # 1 ms
+        time = self.data['time'][peak_time_index - dt:peak_time_index + dt + 1]
+        bes = self.data['bes'][peak_time_index - dt:peak_time_index + dt + 1]
+        ax.plot(time, bes, 'k', alpha=0.8)
+        ax.set_xlabel('time (ms)')
+        ax.set_ylabel('mean bes signal (V)')
+        time_labels = time[np.arange(0, time.shape[0], dt // 2)]
+        ax.set_xticks(time_labels)
+        plt.show()
+
 
 if __name__ == "__main__":
     # elmo = Elmo('elm_data_166576.h5', start_time=5600, end_time=5800,
     #             percentile=0.997)
     # elmo = Elmo('elm_data_166576.h5', start_time=2450, end_time=2550,
     #             percentile=0.997)
-    elmo = Elmo('elm_data_166576.h5', start_time=2460, end_time=2485,
+    elmo = Elmo('elm_data_166576.h5', start_time=2460, end_time=2660,
                 percentile=0.997)
     # elmo = Elmo('/usr/src/app/elm_data/elm_data_184452.h5',
     #             start_time=4000, end_time=4200, percentile=0.997)
