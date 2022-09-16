@@ -23,15 +23,14 @@ class ELMCandidate:
         self.index = index
         self.times = times
         self.bes = bes
+        self.is_elm = 0
 
     def populate_axis(self,
                       ax: plt.axis,
                       relative_time: bool = True
                       ) -> None:
         """ This assumes that the ELM peak is right in the middle of times. """
-        ax.set_title(
-            '{:6d}-{:02d}'.format(self.shot_number, self.index)
-        )
+        ax.set_title(self.make_name())
         ax.plot(self.times, self.bes, 'b', alpha=0.5)
         ax.set_xlabel('time (ms)')
         ax.set_ylabel('mean bes signal (V)')
@@ -40,12 +39,24 @@ class ELMCandidate:
         time_ticks = self.times[np.arange(0, self.times.shape[0], dt)]
         t0 = 0.0  # keep absolute times
         if relative_time:
-            try:  # sometimes this fails, debug later, the ELM list is empty?
                 t0 = self.times[self.times.shape[0] // 2]
-            except IndexError:
-                pass
         time_labels = ['{:4.1f}'.format(x - t0) for x in time_ticks]
         ax.set_xticks(time_ticks, labels=time_labels)
+        ax.text(0.80, 0.93, '{:4.1f}'.format(t0), horizontalalignment='center',
+                verticalalignment='center', transform=ax.transAxes,
+                color='r')
+
+    def package(self) -> dict:
+        package = {}
+        for key, value in self.__dict__.items():
+            package[key] = value
+        return package
+
+    def label_as_elm(self):
+        self.is_elm = 1
+
+    def make_name(self) -> str:
+        return '{:6d}-{:02d}'.format(self.shot_number, self.index)
 
 
 class ELMFacebook:
@@ -82,15 +93,31 @@ class ELMFacebook:
             df = elmo.find_elms()
             elm_times = df['time'][df['peaks'] == True]
             for index, time_index in enumerate(elm_times.index):
-                si = time_index - self.d_index
+                si = max(time_index - self.d_index, 0)
                 ei = time_index + self.d_index + 1
                 ec = ELMCandidate(shot_number=shot, index=index,
                                   times=elmo.data['time'][si:ei],
                                   bes=elmo.data['bes'][si:ei])
+                ec.label_as_elm()
+                # if elmo.data['time'][si:ei].size == 0:
+                #     print('The following candidate did something strange:')
+                #     print('shot: ', shot)
+                #     print('index: ', index)
+                #     print('si: ', si)
+                #     print('ei: ', ei)
+                #     print('times: ', elmo.data['time'][si:ei])
+                #     print('bes: ', elmo.data['bes'][si:ei])
                 self.candidates.append(ec)
 
-    def plot_candidates(self):
-        with PdfPages('multipage_pdf.pdf') as pdf:
+    def package_candidates(self, filename: str = 'candidates.h5'):
+        with h5py.File(filename, 'w') as hdf:
+            for candidate in self.candidates:
+                grp = hdf.create_group(candidate.make_name())
+                for k, v in candidate.package().items():
+                    grp.create_dataset(name=k, data=v)
+
+    def plot_candidates(self, pdf_name: str = 'multipage_pdf.pdf'):
+        with PdfPages(pdf_name) as pdf:
             for idx, candidate in enumerate(self.candidates):
                 mod_idx = idx % 20
                 if mod_idx == 0:
@@ -115,14 +142,24 @@ class ELMFacebook:
 
 
 if __name__ == "__main__":
-    shots = [166576, 166576, 166576, 166576]
+    import json
+    from datetime import datetime
+    t = datetime.strftime(datetime.now(), '%Y%m%d_%H%M%S')
+
+    # shots = [166576]
+    with open('elm_shots.json', 'r') as df:
+        shots = json.load(df)
     fb = ELMFacebook(shots_list=shots)
     t0 = time.time()
     fb.create_candidates()
     t1 = time.time()
-    print('time to load ELMs from {:d} files: {:f}'.format(
-        len(shots), t1 - t0))
-
+    print('time to load {:d} ELMs from {:d} files: {:f}'.format(
+        len(fb.candidates), len(shots), t1 - t0))
+    fb.package_candidates('elm_candidates/candidates_' + t + '.h5')
+    fb.plot_candidates('elm_candidates/candidates_' + t + '.pdf')
+    t2 = time.time()
+    print('time to plot {:d} ELMs from {:d} files: {:f}'.format(
+        len(fb.candidates), len(shots), t2 - t1))
 
 
 
