@@ -49,6 +49,7 @@ def plot_before_and_after_dct(elmo: Elmo, saveplot: bool = False):
     else:
         plt.show()
 
+
 def plot_dct_space(elmo: Elmo, saveplot: bool = False):
     slow_data = get_slow_data(elmo)
     new_length = elmo.data['bes'].shape[0]
