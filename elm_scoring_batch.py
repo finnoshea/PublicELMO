@@ -15,8 +15,8 @@ logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s',
 
 
 fn = 'quantile_stats.json'
-thresholds = [1.0]
-quantiles = np.hstack((np.arange(0.5, 0.96, 0.05),
+thresholds = [0.5, 1.0, 2.0]
+quantiles = np.hstack((np.arange(0.2, 0.96, 0.05),
                        np.arange(0.96, 0.98, 0.01),
                        np.arange(0.99, 0.999, 0.001)
                        ))
@@ -28,6 +28,7 @@ def append_to_file(stats: dict, filename: str = fn) -> None:
     all_stats[len(all_stats)] = stats
     with open(filename, 'w') as jf:
         json.dump(all_stats, jf, indent=3)
+
 
 num = 1
 tot_num = len(thresholds) * len(quantiles)

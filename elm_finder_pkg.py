@@ -3,9 +3,9 @@ import h5py
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.fftpack import dct, idct
+from scipy.fftpack import dct, idct, fft, ifft
 
-from typing import Optional, Callable, Dict
+from typing import Optional, Callable, Dict, List
 
 
 ############################################
@@ -154,12 +154,22 @@ def extract_data(hdffile: str,
         data['bes'] = bes_data
         int_mask = _mask_by_time(hdfgrp['interferometer/times'][()],
                                  start_time, end_time)
+        if int_mask.sum() == 0:
+            estr = 'interferometer data does not contain the time range'
+            estr = estr + '{:7.2f} ms to {:7.2f} ms'.format(start_time,
+                                                            end_time)
+            raise IndexError(estr)
         for name in ['denv2f', 'denv3f']:
             key = 'interferometer/' + name
             data[name.lower()] = chunked_lengthen(
                 hdfgrp[key][int_mask], new_length=bes_times.shape[0])
         fil_mask = _mask_by_time(hdfgrp['filterscope/times'][()],
                                  start_time, end_time)
+        if fil_mask.sum() == 0:
+            estr = 'filterscope data does not contain the time range'
+            estr = estr + '{:7.2f} ms to {:7.2f} ms'.format(start_time,
+                                                            end_time)
+            raise IndexError(estr)
         for name in ['FS02', 'FS03', 'FS04']:
             key = 'filterscope/' + name
             data[name.lower()] = chunked_lengthen(
@@ -172,6 +182,36 @@ def extract_data(hdffile: str,
         data[key] = value[:max_length]
 
     return data
+
+
+def get_smith_labels(directory: str,
+                     filenames: List[str]) -> dict:
+    files = [directory + f for f in filenames]
+    elms = {}
+    for f in files:
+        with h5py.File(f, 'r') as hdf:
+            for grp in hdf.values():
+                shot = grp.attrs['shot']
+                times = grp['time'][()]
+                labels = grp['labels'][()].astype(bool)
+                if shot in elms:
+                    number = len(elms[shot])
+                else:
+                    elms[shot] = {}
+                    number = 0
+                elms[shot][number] = {'time': times, 'labels': labels}
+    return elms
+
+
+def low_pass_filter(time_series: np.ndarray,
+                    omega_c: float,
+                    sample_rate: float = 50000.0) -> np.ndarray:
+    u = fft(time_series)
+    omegas = np.fft.fftfreq(len(time_series), d=1/sample_rate) * 2 * np.pi
+    x = omegas / omega_c
+    amp = 1 / np.sqrt(1 + np.power(x, 2))
+    phase = np.arctan(-x)
+    return ifft(u * amp * np.exp(1j * phase))
 
 
 _default_functions = {'bes': nothing,
@@ -332,13 +372,101 @@ class Elmo:
         plt.show()
 
 
+class FilterscopeElmCompiler:
+    """
+    """
+    def __init__(self):
+        """
+        Grabs all the ELMs labeled by Dave Smith and saves them in an HDF5 file.
+        """
+        self.smith_elms = None
+
+    def get_elms_labeled_by_smith(self):
+        self.smith_elms = get_smith_labels(
+            directory='/usr/src/app/elm_data/',
+            filenames=['labeled-elm-events.hdf5',
+                       'labeled_elm_events_long_windows_20220527.hdf5']
+        )
+
+    @staticmethod
+    def make_shot_filename(shot: int) -> str:
+        filedir = '/usr/src/app/elm_data/'
+        fn = 'elm_data_' + str(shot) + '.h5'
+        return filedir + fn
+
+    def package_all_elms(self,
+                         filename: str = 'smith_elms_filterscope.h5'):
+        assert_str = 'run self.get_elms_labeled_by_smith() first'
+        assert self.smith_elms is not None, assert_str
+
+        with h5py.File(filename, 'w') as hdf:
+            for shot_count, (shot, indexes) in \
+                    enumerate(self.smith_elms.items()):
+                ptr = '{:03d}/{:03d}: saving filterscope '.format(
+                    shot_count + 1, len(self.smith_elms.keys()))
+                ptr = ptr + 'for shot {:d}'.format(shot)
+                print(ptr)
+                # open the hdf5 file with the filterscope data
+                fn = self.make_shot_filename(shot)
+                with h5py.File(fn, 'r') as source_hdf:
+                    source = source_hdf['filterscope']
+                    for index, values in indexes.items():
+                        # start saving some data
+                        sn = str(shot) + '-{:02d}'.format(index)
+                        print('Saving ' + sn)
+                        grp = hdf.create_group(sn)
+                        grp.create_dataset(
+                            'labels',  data=values['labels'])  # smith's labels
+                        grp.create_dataset(
+                            'label_time', data=values['time'])
+                        # mask the times from values['time']
+                        mask = _mask_by_time(source['times'][()],
+                                             values['time'][0],
+                                             values['time'][-1])
+                        grp.create_dataset('time', data=source['times'][mask])
+                        # save the filterscope data
+                        for fs in ['FS02', 'FS03', 'FS04']:
+                            grp.create_dataset(fs, data=source[fs][mask])
+
+
+class FilterscopeElmFinder:
+    """
+    """
+    def __init__(self):
+        """
+        ELM labeler as described in:
+        https://iopscience.iop.org/article/10.1088/1741-4326/aa6b16
+        """
+        self.smith_elms = {}
+
+    @staticmethod
+    def eldon_algo(time_series: np.ndarray) \
+            -> (np.ndarray, np.ndarray, np.ndarray):
+        """
+
+        Parameters
+        ----------
+        time_series : np.ndarray
+            The filterscope data sampled at 50 kHz.
+
+        Returns
+        -------
+        D-S, SD1, and SD2 from the Eldon paper.
+        """
+        slow = low_pass_filter(time_series, 1000.0).real
+        dsdt = np.diff(slow)
+        sd1 = low_pass_filter(dsdt, 1000.0).real
+        sd2 = low_pass_filter(dsdt, 200.0).real
+        return time_series[:-1] - slow[:-1], sd1, sd2
+
+
 if __name__ == "__main__":
     # elmo = Elmo('elm_data_166576.h5', start_time=5600, end_time=5800,
     #             percentile=0.997)
-    # elmo = Elmo('elm_data_166576.h5', start_time=2450, end_time=2550,
-    #             percentile=0.997)
-    elmo = Elmo('elm_data_166576.h5', start_time=2460, end_time=2660,
+    elmo = Elmo('elm_data_166576.h5', start_time=2450, end_time=2550,
                 percentile=0.997)
+    # elmo = Elmo('elm_data_166576.h5', start_time=2460, end_time=2660,
+    #             percentile=0.997)
     # elmo = Elmo('/usr/src/app/elm_data/elm_data_184452.h5',
     #             start_time=4000, end_time=4200, percentile=0.997)
     df = elmo.find_elms()

@@ -37,13 +37,16 @@ def plot_before_and_after_dct(elmo: Elmo, saveplot: bool = False):
 
     times = ['int_time', 'int_time', 'fil_time', 'fil_time', 'fil_time']
     plots = ['denv2f', 'denv3f', 'fs02', 'fs03', 'fs04']
-    for ax, t, p in zip(axs, times, plots):
+    types = ['interferometer', 'interferometer',
+             'filterscope', 'filterscope', 'filterscope']
+    for ax, t, p, tt in zip(axs, times, plots, types):
         ax.plot(elmo.data['time'], elmo.data[p], '-b')
         ax.scatter(slow_data[t], slow_data[p], s=5, marker='o', color='r')
-        ax.set_ylabel(p)
+        ax.set_ylabel('{:s}\n{:s}'.format(tt, p))
     axs[-1].set_xlabel('time (ms)')
     axs[-1].set_xlim([5625.0, 5625.5])
     axs[-1].ticklabel_format(useOffset=False)
+    fig.tight_layout()
     if saveplot:
         fig.savefig('article_images/before_and_after_dct.png', dpi=300)
     else:
@@ -57,25 +60,27 @@ def plot_dct_space(elmo: Elmo, saveplot: bool = False):
                             squeeze=True, figsize=(6, 10))
 
     plots = ['denv2f', 'denv3f', 'fs02', 'fs03', 'fs04']
-    for ax, p in zip(axs, plots):
+    types = ['interferometer', 'interferometer',
+             'filterscope', 'filterscope', 'filterscope']
+    for ax, p, tt in zip(axs, plots, types):
         final_arr = np.zeros(new_length)
         y = dct(slow_data[p], norm='ortho')
         final_arr[:y.shape[0]] = y
         ax.plot(np.abs(final_arr))
-        ax.set_ylabel('dct({:s})'.format(p))
+        ax.set_ylabel('{:s}\ndct({:s})'.format(tt, p))
         ax.axvline(y.shape[0], linestyle='dashed', color='r')
         ax.set_yscale('log')
     axs[-1].set_xlabel('frequency (arb.)')
     axs[-1].set_xlim([0, 25000])
-
+    fig.tight_layout()
     if saveplot:
         fig.savefig('article_images/dct_space.png', dpi=300)
     else:
         plt.show()
 
 
-def plot_pr_curve(saveplot: bool = False):
-    with open('quantile_stats.json', 'r') as jf:
+def frame_data(filename: str) -> pd.DataFrame:
+    with open(filename, 'r') as jf:
         quants = json.load(jf)
 
     df = pd.DataFrame.from_dict(quants, orient='index')
@@ -85,8 +90,12 @@ def plot_pr_curve(saveplot: bool = False):
                             axis=1)
     df['AUC'] = df['precision'] * df['recall']
 
-    dfs = df.sort_values('AUC', ascending=False).reset_index(drop=True)
-    print(dfs.loc[0])
+    # dfs = df.sort_values('AUC', ascending=False).reset_index(drop=True)
+    return df
+
+
+def plot_pr_curve(saveplot: bool = False):
+    df = frame_data('quantile_stats_article.json')
 
     fig, ax = plt.subplots(1, 1)
 
@@ -94,7 +103,7 @@ def plot_pr_curve(saveplot: bool = False):
         mask = df['bes_thresh'] == thresh
         recall = np.hstack(([1.0], df.loc[mask, 'recall'], [0.0]))
         precision = np.hstack(([0.0], df.loc[mask, 'precision'], [1.0]))
-        plt.plot(recall, precision)
+        plt.plot(recall, precision, label='t={:3.1f}'.format(thresh))
 
     ax.set_xlabel('recall')
     ax.set_ylabel('precision')
@@ -102,7 +111,7 @@ def plot_pr_curve(saveplot: bool = False):
     ax.set_ylim([0, 1.05])
     ax.set_xticks([n / 5 for n in range(6)])
     ax.set_yticks([n / 5 for n in range(6)])
-    # ax.legend(loc='lower left')
+    ax.legend(loc='lower left')
     if saveplot:
         fig.savefig('article_images/pr_curve.png', dpi=300)
     else:
@@ -151,4 +160,5 @@ if __name__ == "__main__":
                 percentile=0.997)
     # elmo = Elmo('/usr/src/app/elm_data/elm_data_184452.h5',
     #             start_time=4000, end_time=4200, percentile=0.997)
+    elmo.load_data()
     # df = elmo.find_elms()

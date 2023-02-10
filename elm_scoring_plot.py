@@ -132,7 +132,7 @@ def find_bad_examples(quantile: float = 0.95, bes_thresh: float = 1.0,
                                      save_name=save_name)
 
 
-with open('quantile_stats.json', 'r') as jf:
+with open('quantile_stats_5.json', 'r') as jf:
     quants = json.load(jf)
 
 

@@ -6,6 +6,7 @@ from data_loader import load_bes_data
 
 from typing import Union, Callable, Dict
 
+
 def diff_signal(arr: np.array) -> np.array:
     return np.abs(np.diff(arr))
 
@@ -88,7 +89,7 @@ def label_elms(df: pd.DataFrame) -> pd.DataFrame:
                      (np.convolve(df['denv3f'],
                                   np.ones(2 * n + 1),
                                   mode='same') > 0).astype(int)
-    # two of of three
+    # at least two out of three
     fs02 = (np.convolve(df['FS02'], np.ones(2 * n + 1),
                         mode='same') > 0).astype(int)
     fs03 = (np.convolve(df['FS03'], np.ones(2 * n + 1),
