@@ -31,13 +31,13 @@ def compare_finder_and_smith(shot: h5py.Group,
     # smooth out the spikes that don't tell us anything
     smooth = 100  # 100 microseconds
     pf = df['elms'].values.copy()
-    starts = np.arange(pf.shape[0])[pf]
-    for s in starts:
-        if s + smooth >= len(pf):
-            end = len(pf)
-        else:
-            end = s + smooth
-        pf[s:end] = np.ones(end - s)
+    # starts = np.arange(pf.shape[0])[pf]
+    # for s in starts:
+    #     if s + smooth >= len(pf):
+    #         end = len(pf)
+    #     else:
+    #         end = s + smooth
+    #     pf[s:end] = np.ones(end - s)
 
     pfp = np.logical_or(pf, labels).astype(int)  # possible fps
     # count the number of rising edges and subtract the expected 1

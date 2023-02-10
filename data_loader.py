@@ -10,11 +10,11 @@ from typing import Union, List
 SHOTDIR = '/sdf/group/ml/datasets/elm_data'
 SHOTFILE = lambda x: 'elm_data_{:d}.h5'.format(x)
 # ROOT = '/Users/foshea/Documents/Projects/Anomaly Detection/Plasma/'
-ROOT = '/sdf/home/f/foshea/Plasma/'
+ROOT = '/sdf/group/ml/edge_plasma/users/foshea/Plasma/'
 FILES = ['labeled-elm-events.hdf5',
          'labeled_elm_events_long_windows_20220527.hdf5']
-SMITHSHOTS = '/sdf/group/ml/datasets/elm_data/smith_traces.h5'
-
+# SMITHSHOTS = '/sdf/group/ml/datasets/elm_data/smith_traces.h5'
+SMITHSHOTS = '/usr/src/app/elm_data/smith_traces.h5'
 
 def _mask_by_time(t: np.ndarray,
                   start_time: float,
